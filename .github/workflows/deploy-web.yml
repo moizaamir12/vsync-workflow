@@ -1,0 +1,111 @@
+name: Deploy Web
+
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      # ── Preview deployment (PRs) ───────────────────────────
+      - name: Pull Vercel env (preview)
+        if: github.event_name == 'pull_request'
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build (preview)
+        if: github.event_name == 'pull_request'
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy preview
+        if: github.event_name == 'pull_request'
+        id: preview
+        run: |
+          URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Comment PR with preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.preview.outputs.url }}';
+            if (!url) return;
+            const body = `**Preview deployment ready** :rocket:\n\n${url}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user?.login === 'github-actions[bot]' &&
+              c.body?.includes('Preview deployment ready')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      # ── Staging deployment (push to main) ───────────────────
+      - name: Pull Vercel env (production)
+        if: github.event_name != 'pull_request'
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build (production)
+        if: github.event_name != 'pull_request'
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy staging
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+      # ── Production deployment (release tags) ────────────────
+      - name: Deploy production
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

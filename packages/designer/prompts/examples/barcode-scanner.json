@@ -1,0 +1,65 @@
+{
+  "name": "Barcode Scanner",
+  "description": "Scan a barcode with the camera, extract the tracking number, look up package info, and display results",
+  "category": "Logistics",
+  "triggerType": "interactive",
+  "triggerConfig": {},
+  "executionEnvironments": ["mobile"],
+  "blocks": [
+    {
+      "id": "scan",
+      "name": "Scan Barcode",
+      "type": "ui_camera",
+      "logic": {
+        "ui_camera_title": "Scan Barcode",
+        "ui_camera_instructions": "Point the camera at a barcode to scan it",
+        "ui_camera_mode": "barcode",
+        "ui_camera_bind_value": "scan"
+      },
+      "order": 0,
+      "notes": "Opens the camera in barcode mode to scan a package barcode"
+    },
+    {
+      "id": "extract",
+      "name": "Extract Tracking Number",
+      "type": "string",
+      "logic": {
+        "string_input": "$state.scan.barcodes[0].value",
+        "string_operation": "extract",
+        "string_extract_mode": "number",
+        "string_bind_value": "trackingNumber"
+      },
+      "order": 1,
+      "notes": "Extracts the numeric tracking number from the scanned barcode value"
+    },
+    {
+      "id": "lookup",
+      "name": "Look Up Package",
+      "type": "fetch",
+      "logic": {
+        "fetch_url": "https://jsonplaceholder.typicode.com/posts/$state.trackingNumber",
+        "fetch_method": "GET",
+        "fetch_bind_value": "packageInfo"
+      },
+      "order": 2,
+      "notes": "Looks up the package details using the extracted tracking number"
+    },
+    {
+      "id": "display",
+      "name": "Show Package Info",
+      "type": "ui_details",
+      "logic": {
+        "ui_details_title": "Package Info",
+        "ui_details_data": "$state.packageInfo",
+        "ui_details_layout": "card",
+        "ui_details_fields": [
+          { "key": "id", "label": "Tracking #" },
+          { "key": "title", "label": "Description" },
+          { "key": "body", "label": "Details" }
+        ]
+      },
+      "order": 3,
+      "notes": "Displays the package information in a card layout"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "name": "Hello API",
+  "description": "Simple GET request that fetches data from an API and displays it in a card view",
+  "category": "Getting Started",
+  "triggerType": "interactive",
+  "triggerConfig": {},
+  "executionEnvironments": ["cloud"],
+  "blocks": [
+    {
+      "id": "fetch-data",
+      "name": "Fetch API Data",
+      "type": "fetch",
+      "logic": {
+        "fetch_url": "https://jsonplaceholder.typicode.com/posts/1",
+        "fetch_method": "GET",
+        "fetch_bind_value": "apiResponse"
+      },
+      "order": 0,
+      "notes": "Fetches a sample post from JSONPlaceholder API"
+    },
+    {
+      "id": "transform",
+      "name": "Extract Fields",
+      "type": "object",
+      "logic": {
+        "object_operation": "create",
+        "object_value": {
+          "title": "$state.apiResponse.title",
+          "body": "$state.apiResponse.body"
+        },
+        "object_bind_value": "display"
+      },
+      "order": 1,
+      "notes": "Extracts title and body from the API response into a clean display object"
+    },
+    {
+      "id": "show-result",
+      "name": "Show Result",
+      "type": "ui_details",
+      "logic": {
+        "ui_details_title": "API Response",
+        "ui_details_data": "$state.display",
+        "ui_details_layout": "card",
+        "ui_details_fields": [
+          { "key": "title", "label": "Title" },
+          { "key": "body", "label": "Body" }
+        ]
+      },
+      "order": 2,
+      "notes": "Displays the fetched data in a card layout"
+    }
+  ]
+}

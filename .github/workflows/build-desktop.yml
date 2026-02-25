@@ -1,0 +1,85 @@
+name: Build Desktop
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            build_cmd: build:mac
+            artifact_glob: |
+              apps/desktop/release/**/*.dmg
+              apps/desktop/release/**/*.zip
+              apps/desktop/release/**/latest-mac.yml
+          - os: windows-latest
+            build_cmd: build:win
+            artifact_glob: |
+              apps/desktop/release/**/*.exe
+              apps/desktop/release/**/latest.yml
+          - os: ubuntu-latest
+            build_cmd: build:linux
+            artifact_glob: |
+              apps/desktop/release/**/*.AppImage
+              apps/desktop/release/**/*.deb
+              apps/desktop/release/**/latest-linux.yml
+
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      # macOS code signing
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      # macOS notarization
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # Windows code signing (optional)
+      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      # electron-builder uses GH_TOKEN for GitHub Releases publish
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Build desktop app
+        run: pnpm --filter @vsync/desktop ${{ matrix.build_cmd }}
+
+      - name: Upload artifacts to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.artifact_glob }}
+          draft: false
+          prerelease: false

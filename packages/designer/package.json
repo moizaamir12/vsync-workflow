@@ -1,0 +1,32 @@
+{
+  "name": "@vsync/designer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "generate-docs": "npx tsx scripts/generate-docs.ts"
+  },
+  "dependencies": {
+    "ai": "^4.0.0",
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "zod": "^3.23.8",
+    "@vsync/blocks": "workspace:*",
+    "@vsync/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@vsync/vitest": "workspace:*",
+    "vitest": "^3.2.4"
+  }
+}

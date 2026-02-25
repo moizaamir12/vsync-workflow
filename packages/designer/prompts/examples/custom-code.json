@@ -1,0 +1,56 @@
+{
+  "name": "Custom Code",
+  "description": "Write JavaScript code to process data with full control over the logic",
+  "category": "Custom Code",
+  "triggerType": "interactive",
+  "triggerConfig": {},
+  "executionEnvironments": ["cloud"],
+  "blocks": [
+    {
+      "id": "setup",
+      "name": "Setup Data",
+      "type": "object",
+      "logic": {
+        "object_operation": "create",
+        "object_value": {
+          "items": [10, 25, 30, 15, 42],
+          "label": "Sales Data"
+        },
+        "object_bind_value": "data"
+      },
+      "order": 0,
+      "notes": "Creates sample data for the code block to process"
+    },
+    {
+      "id": "process",
+      "name": "Process Data",
+      "type": "code",
+      "logic": {
+        "code_source": "const items = state.data.items;\nconst sum = items.reduce((a, b) => a + b, 0);\nconst avg = sum / items.length;\nconst max = Math.max(...items);\nstate.result = { sum, average: avg.toFixed(2), max, count: items.length };\nreturn state.result;",
+        "code_language": "javascript",
+        "code_timeout_ms": 5000,
+        "code_bind_value": "result"
+      },
+      "order": 1,
+      "notes": "Calculates sum, average, max, and count from the data items"
+    },
+    {
+      "id": "display",
+      "name": "Show Analysis",
+      "type": "ui_details",
+      "logic": {
+        "ui_details_title": "Analysis Result",
+        "ui_details_data": "$state.result",
+        "ui_details_layout": "grid",
+        "ui_details_fields": [
+          { "key": "sum", "label": "Total", "format": "number" },
+          { "key": "average", "label": "Average", "format": "number" },
+          { "key": "max", "label": "Maximum", "format": "number" },
+          { "key": "count", "label": "Item Count", "format": "number" }
+        ]
+      },
+      "order": 2,
+      "notes": "Displays the computed statistics in a grid layout"
+    }
+  ]
+}

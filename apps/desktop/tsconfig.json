@@ -1,0 +1,9 @@
+{
+  "extends": "../../tooling/typescript/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/main", "src/types", "src/desktop-features.ts"]
+}

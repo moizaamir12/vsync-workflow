@@ -1,0 +1,22 @@
+{
+  "name": "@vsync/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vsync/shared-types": "workspace:*",
+    "esbuild": "^0.27.3",
+    "nanoid": "^5.0.0"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "name": "Form Collector",
+  "description": "Display an intake form, collect user responses, and show a confirmation summary",
+  "category": "Logistics",
+  "triggerType": "interactive",
+  "triggerConfig": {},
+  "executionEnvironments": ["cloud", "mobile"],
+  "blocks": [
+    {
+      "id": "collect",
+      "name": "Package Intake Form",
+      "type": "ui_form",
+      "logic": {
+        "ui_form_title": "Package Intake Form",
+        "ui_form_fields": [
+          {
+            "key": "sender",
+            "label": "Sender Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "recipient",
+            "label": "Recipient Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "weight",
+            "label": "Weight (kg)",
+            "type": "number",
+            "required": true
+          },
+          {
+            "key": "priority",
+            "label": "Priority",
+            "type": "select",
+            "required": true,
+            "options": ["Standard", "Express", "Overnight"]
+          }
+        ],
+        "ui_form_submit_label": "Submit Package",
+        "ui_form_bind_value": "formData"
+      },
+      "order": 0,
+      "notes": "Collects package intake information from the user"
+    },
+    {
+      "id": "prepare",
+      "name": "Prepare Record",
+      "type": "object",
+      "logic": {
+        "object_operation": "merge",
+        "object_sources": [
+          "$state.formData",
+          { "status": "received", "timestamp": "$now" }
+        ],
+        "object_bind_value": "package"
+      },
+      "order": 1,
+      "notes": "Merges form data with status and timestamp metadata"
+    },
+    {
+      "id": "confirm",
+      "name": "Show Confirmation",
+      "type": "ui_details",
+      "logic": {
+        "ui_details_title": "Package Submitted",
+        "ui_details_data": "$state.package",
+        "ui_details_layout": "card",
+        "ui_details_fields": [
+          { "key": "sender", "label": "From" },
+          { "key": "recipient", "label": "To" },
+          { "key": "weight", "label": "Weight", "suffix": " kg" },
+          { "key": "priority", "label": "Priority" },
+          { "key": "status", "label": "Status" }
+        ]
+      },
+      "order": 2,
+      "notes": "Displays confirmation of the submitted package details"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Build Docker image and push to GHCR ─────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/api
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy to Fly.io staging ────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment:
+      name: staging
+      url: https://vsync-api-staging.fly.dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to staging
+        run: flyctl deploy --app vsync-api-staging --image ghcr.io/${{ github.repository_owner }}/api:sha-${{ github.sha }} --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl --fail --retry 5 --retry-delay 5 --retry-all-errors \
+            https://vsync-api-staging.fly.dev/api/v1/health
+
+  # ── Deploy to Fly.io production ─────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment:
+      name: production
+      url: https://vsync-api.fly.dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to production
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/api:${TAG}"
+          # Fall back to SHA tag for manual dispatch
+          if [[ "$TAG" == "$GITHUB_REF" ]]; then
+            IMAGE="ghcr.io/${{ github.repository_owner }}/api:sha-${{ github.sha }}"
+          fi
+          flyctl deploy --app vsync-api --image "$IMAGE" --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl --fail --retry 5 --retry-delay 5 --retry-all-errors \
+            https://vsync-api.fly.dev/api/v1/health

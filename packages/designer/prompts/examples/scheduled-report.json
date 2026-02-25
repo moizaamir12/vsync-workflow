@@ -1,0 +1,53 @@
+{
+  "name": "Scheduled Report",
+  "description": "Automatically fetch data on a schedule, generate a summary report, and send a notification",
+  "category": "Automation",
+  "triggerType": "schedule",
+  "triggerConfig": {
+    "schedule_cron": "0 9 * * *"
+  },
+  "executionEnvironments": ["cloud"],
+  "blocks": [
+    {
+      "id": "fetch-data",
+      "name": "Fetch Source Data",
+      "type": "fetch",
+      "logic": {
+        "fetch_url": "https://jsonplaceholder.typicode.com/posts",
+        "fetch_method": "GET",
+        "fetch_bind_value": "data"
+      },
+      "order": 0,
+      "notes": "Fetches the latest data to include in the report"
+    },
+    {
+      "id": "summarize",
+      "name": "Generate Summary",
+      "type": "code",
+      "logic": {
+        "code_source": "const posts = state.data;\nstate.summary = {\n  total: posts.length,\n  latest: posts[posts.length - 1].title,\n  reportDate: new Date().toISOString().split('T')[0]\n};\nreturn state.summary;",
+        "code_language": "javascript",
+        "code_timeout_ms": 5000,
+        "code_bind_value": "summary"
+      },
+      "order": 1,
+      "notes": "Summarizes the data into a concise report object"
+    },
+    {
+      "id": "notify",
+      "name": "Send Notification",
+      "type": "fetch",
+      "logic": {
+        "fetch_url": "https://httpbin.org/post",
+        "fetch_method": "POST",
+        "fetch_body": "$state.summary",
+        "fetch_headers": {
+          "Content-Type": "application/json"
+        },
+        "fetch_bind_value": "notificationResult"
+      },
+      "order": 2,
+      "notes": "Posts the summary to a webhook endpoint as a notification"
+    }
+  ]
+}

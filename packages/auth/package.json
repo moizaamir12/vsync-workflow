@@ -1,0 +1,33 @@
+{
+  "name": "@vsync/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vsync/config": "workspace:*",
+    "@vsync/db": "workspace:*",
+    "@vsync/shared-types": "workspace:*",
+    "better-auth": "^1.4.0",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.0.0",
+    "resend": "^4.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.0"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "Weather Dashboard",
+  "triggerType": "interactive",
+  "triggerConfig": {},
+  "blocks": [
+    {
+      "id": "fetch_weather",
+      "name": "Fetch Weather Data",
+      "type": "fetch",
+      "logic": {
+        "fetch_url": "https://api.openweathermap.org/data/2.5/weather?q=$event.city&appid=$keys.OPENWEATHER_KEY&units=metric",
+        "fetch_method": "GET",
+        "fetch_headers": {},
+        "fetch_timeout_ms": 10000,
+        "fetch_bind_value": "weather"
+      },
+      "order": 0
+    },
+    {
+      "id": "extract_data",
+      "name": "Extract Key Fields",
+      "type": "object",
+      "logic": {
+        "object_operation": "create",
+        "object_value": {
+          "city": "$state.weather.name",
+          "temp": "$state.weather.main.temp",
+          "humidity": "$state.weather.main.humidity",
+          "description": "$state.weather.weather[0].description",
+          "wind_speed": "$state.weather.wind.speed"
+        },
+        "object_bind_value": "summary"
+      },
+      "order": 1
+    },
+    {
+      "id": "show_weather",
+      "name": "Display Weather",
+      "type": "ui_details",
+      "logic": {
+        "ui_details_data": "$state.summary",
+        "ui_details_title": "Weather Report",
+        "ui_details_layout": "card",
+        "ui_details_fields": [
+          { "key": "city", "label": "City" },
+          { "key": "temp", "label": "Temperature", "format": "number", "suffix": " C" },
+          { "key": "humidity", "label": "Humidity", "format": "number", "suffix": "%" },
+          { "key": "description", "label": "Conditions" },
+          { "key": "wind_speed", "label": "Wind Speed", "format": "number", "suffix": " m/s" }
+        ]
+      },
+      "order": 2
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "name": "Data Transform",
+  "description": "Fetch a JSON list, filter and transform it, then display results in a searchable table",
+  "category": "Data Processing",
+  "triggerType": "interactive",
+  "triggerConfig": {},
+  "executionEnvironments": ["cloud"],
+  "blocks": [
+    {
+      "id": "fetch-list",
+      "name": "Fetch Posts",
+      "type": "fetch",
+      "logic": {
+        "fetch_url": "https://jsonplaceholder.typicode.com/posts",
+        "fetch_method": "GET",
+        "fetch_bind_value": "posts"
+      },
+      "order": 0,
+      "notes": "Fetches a list of posts from JSONPlaceholder"
+    },
+    {
+      "id": "filter",
+      "name": "Filter by User",
+      "type": "array",
+      "logic": {
+        "array_operation": "filter",
+        "array_input": "$state.posts",
+        "array_filter_mode": "match",
+        "array_filter_field": "userId",
+        "array_filter_operator": "==",
+        "array_filter_value": 1,
+        "array_bind_value": "filtered"
+      },
+      "order": 1,
+      "notes": "Filters posts to only include those from user 1"
+    },
+    {
+      "id": "pluck",
+      "name": "Extract Titles",
+      "type": "array",
+      "logic": {
+        "array_operation": "pluck",
+        "array_input": "$state.filtered",
+        "array_pluck_field": "title",
+        "array_bind_value": "titles"
+      },
+      "order": 2,
+      "notes": "Extracts just the title field from each filtered post"
+    },
+    {
+      "id": "show-table",
+      "name": "Show Results Table",
+      "type": "ui_table",
+      "logic": {
+        "ui_table_title": "User Posts",
+        "ui_table_data": "$state.filtered",
+        "ui_table_columns": [
+          { "key": "id", "label": "ID" },
+          { "key": "title", "label": "Title" }
+        ],
+        "ui_table_searchable": true
+      },
+      "order": 3,
+      "notes": "Displays filtered posts in a searchable table"
+    }
+  ]
+}

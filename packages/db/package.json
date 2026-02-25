@@ -1,0 +1,35 @@
+{
+  "name": "@vsync/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:seed": "tsx src/seeds/templates.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.0",
+    "@neondatabase/serverless": "^0.10.0",
+    "@vsync/config": "workspace:*",
+    "@vsync/shared-types": "workspace:*",
+    "better-sqlite3": "^11.0.0",
+    "drizzle-orm": "^0.45.1",
+    "nanoid": "^5.0.0",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.0.0"
+  }
+}

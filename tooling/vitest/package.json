@@ -1,0 +1,9 @@
+{
+  "name": "@vsync/vitest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./vitest.config.ts"
+  }
+}
