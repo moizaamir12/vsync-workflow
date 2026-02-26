@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import crypto from "node:crypto";
 import type { AuthInstance } from "@vsync/auth";
 import { requireAuth, requireOrg, requireRole } from "@vsync/auth";
 import type { Database } from "@vsync/db";
@@ -34,21 +35,50 @@ const ResolveKeySchema = z.object({
   workflowId: z.string().optional(),
 });
 
-// TODO(security): Replace placeholder Base64 encoding with real AES-256-GCM encryption. Current implementation stores plaintext in Base64 — not secure for production.
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 12; // 96-bit IV recommended for GCM
+const AUTH_TAG_LENGTH = 16;
+
 /**
- * Placeholder encryption — a production system would use
- * AES-256-GCM with a KMS-managed key. This demonstrates
- * the encryption/decryption boundary without adding a
- * crypto dependency.
+ * Derives a 256-bit encryption key from the application secret
+ * using HKDF. Falls back to AUTH_SECRET if KEY_ENCRYPTION_SECRET
+ * is not set. Throws at startup if neither is available.
  */
-function encrypt(value: string): { encryptedValue: string; iv: string } {
-  const iv = Buffer.from(Date.now().toString()).toString("base64");
-  const encryptedValue = Buffer.from(value).toString("base64");
-  return { encryptedValue, iv };
+function getEncryptionKey(): Buffer {
+  const secret = process.env["KEY_ENCRYPTION_SECRET"] ?? process.env["AUTH_SECRET"];
+  if (!secret) {
+    throw new Error("KEY_ENCRYPTION_SECRET or AUTH_SECRET environment variable is required for key encryption");
+  }
+  return crypto.createHash("sha256").update(secret).digest();
 }
 
-function decrypt(encryptedValue: string, _iv: string): string {
-  return Buffer.from(encryptedValue, "base64").toString("utf-8");
+/**
+ * Encrypts a value using AES-256-GCM.
+ * Returns the encrypted value (ciphertext + auth tag, base64) and IV (base64).
+ */
+function encrypt(value: string): { encryptedValue: string; iv: string } {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
+  const encrypted = Buffer.concat([cipher.update(value, "utf-8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  // Store ciphertext + authTag together so decryption has everything it needs
+  const encryptedValue = Buffer.concat([encrypted, authTag]).toString("base64");
+  return { encryptedValue, iv: iv.toString("base64") };
+}
+
+/**
+ * Decrypts a value encrypted with AES-256-GCM.
+ * Expects encryptedValue = base64(ciphertext + authTag), iv = base64(iv).
+ */
+function decrypt(encryptedValue: string, iv: string): string {
+  const key = getEncryptionKey();
+  const combined = Buffer.from(encryptedValue, "base64");
+  const authTag = combined.subarray(combined.length - AUTH_TAG_LENGTH);
+  const ciphertext = combined.subarray(0, combined.length - AUTH_TAG_LENGTH);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(iv, "base64"), { authTagLength: AUTH_TAG_LENGTH });
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf-8");
 }
 
 export function keyRoutes(auth: AuthInstance, db: Database) {

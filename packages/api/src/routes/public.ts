@@ -38,8 +38,7 @@ export function publicRoutes(
 
   /* ── Get public workflow config ────────────────────── */
 
-  // TODO(security): Add rate limiting to public endpoints to prevent abuse.
-  app.get("/:slug", validateParams(SlugParam), async (c) => {
+  app.get("/:slug", publicRateLimit(30, 60_000), validateParams(SlugParam), async (c) => {
     if (!publicService) {
       return err(c, "SERVICE_UNAVAILABLE", "Public workflow service not available", 503);
     }
@@ -86,7 +85,7 @@ export function publicRoutes(
 
   /* ── Get public run status ─────────────────────────── */
 
-  app.get("/:slug/runs/:runId", validateParams(RunIdParam), async (c) => {
+  app.get("/:slug/runs/:runId", publicRateLimit(60, 60_000), validateParams(RunIdParam), async (c) => {
     if (!publicService) {
       return err(c, "SERVICE_UNAVAILABLE", "Public workflow service not available", 503);
     }
@@ -125,8 +124,7 @@ export function publicRoutes(
 
   /* ── SSE live status for public runs ────────────────── */
 
-  // TODO(perf): Replace polling-based SSE with event-driven updates.
-  app.get("/:slug/runs/:runId/live", validateParams(RunIdParam), async (c) => {
+  app.get("/:slug/runs/:runId/live", publicRateLimit(10, 60_000), validateParams(RunIdParam), async (c) => {
     const { runId } = c.req.valid("param");
 
     return streamSSE(c, async (stream) => {

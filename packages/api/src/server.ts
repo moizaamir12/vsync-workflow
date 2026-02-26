@@ -347,19 +347,55 @@ async function main() {
       return;
     }
 
-    // TODO(security): Move WebSocket auth token from query parameter to a secure handshake mechanism — tokens in URLs are logged in server access logs.
-    const token = url.searchParams.get("token");
+    /**
+     * Accept the auth token from the Authorization header (preferred)
+     * or fall back to the query parameter for browser compatibility.
+     * The header approach avoids leaking tokens in server access logs.
+     */
+    const authHeader = request.headers["authorization"];
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : url.searchParams.get("token");
     const channels = (url.searchParams.get("channels") ?? "")
       .split(",")
       .filter(Boolean);
 
-    wss.handleUpgrade(request, socket, head, (ws: WsWebSocket) => {
+    if (!token) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    wss.handleUpgrade(request, socket, head, async (ws: WsWebSocket) => {
       const wsLike = ws as unknown as WSLike;
 
-      // TODO(auth): Implement proper WebSocket authentication — currently connections are accepted without verifying the token.
+      /**
+       * Validate the session token against Better Auth before
+       * accepting the connection. Reject with a close frame if
+       * the token is invalid or expired.
+       */
+      let userId: string | null = null;
+      let orgId: string | null = null;
+      try {
+        const session = await auth.api.getSession({
+          headers: new Headers({ authorization: `Bearer ${token}` }),
+        });
+        if (!session?.user) {
+          ws.close(4001, "Invalid or expired session token");
+          return;
+        }
+        userId = session.user.id;
+        const sessionRecord = session.session as Record<string, unknown>;
+        const rawOrgId = sessionRecord["activeOrganizationId"];
+        orgId = typeof rawOrgId === "string" ? rawOrgId : null;
+      } catch {
+        ws.close(4001, "Authentication failed");
+        return;
+      }
+
       wsManager.register(wsLike, {
-        userId: token ? "pending-auth" : null,
-        orgId: null,
+        userId,
+        orgId,
         channels: new Set(channels),
       });
 
@@ -379,6 +415,7 @@ async function main() {
       ws.send(JSON.stringify({
         type: "connected",
         timestamp: new Date().toISOString(),
+        userId,
         channels,
       }));
     });

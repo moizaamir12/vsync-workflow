@@ -56,10 +56,13 @@ export function versionRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Get version with blocks ───────────────────────────────── */
 
-  // TODO(auth): Verify org ownership of the workflow before returning version data.
-  app.get("/:id/versions/:v", requireAuth(auth), validateParams(VersionParam), async (c) => {
+  app.get("/:id/versions/:v", requireAuth(auth), requireOrg(auth), orgContext(), validateParams(VersionParam), async (c) => {
+    const authCtx = c.get("auth");
     const { id, v } = c.req.valid("param");
     const versionNum = parseInt(v, 10);
+
+    const workflow = await repo.findById(id);
+    if (!workflow || workflow.orgId !== authCtx.orgId) return notFound(c, "Workflow");
 
     const versions = await repo.findVersions(id);
     const version = versions.find((ver) => ver.version === versionNum);

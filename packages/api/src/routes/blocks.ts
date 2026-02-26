@@ -5,7 +5,7 @@ import { eq, and, asc } from "drizzle-orm";
 import type { AuthInstance } from "@vsync/auth";
 import { requireAuth, requireOrg } from "@vsync/auth";
 import type { Database } from "@vsync/db";
-import { blocks as blocksTable } from "@vsync/db";
+import { blocks as blocksTable, workflows as workflowsTable } from "@vsync/db";
 import { validateBody, validateParams } from "../middleware/validate.js";
 import { orgContext } from "../middleware/org-context.js";
 import { ok, notFound, err } from "../lib/response.js";
@@ -99,16 +99,28 @@ export function blockRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Update block ──────────────────────────────────────────── */
 
-  // TODO(auth): Verify the workflow belongs to the user's org before allowing block updates.
   app.patch(
     "/blocks/:id",
     requireAuth(auth),
+    requireOrg(auth),
     orgContext(),
     validateParams(BlockIdParam),
     validateBody(UpdateBlockSchema),
     async (c) => {
+      const authCtx = c.get("auth");
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
+
+      /* Verify the block's workflow belongs to the user's org */
+      const block = await db.query.blocks.findFirst({
+        where: eq(blocksTable.id, id),
+      });
+      if (!block) return notFound(c, "Block");
+
+      const workflow = await db.query.workflows.findFirst({
+        where: eq(workflowsTable.id, block.workflowId),
+      });
+      if (!workflow || workflow.orgId !== authCtx.orgId) return notFound(c, "Block");
 
       const [updated] = await db
         .update(blocksTable)
@@ -126,10 +138,23 @@ export function blockRoutes(auth: AuthInstance, db: Database) {
   app.delete(
     "/blocks/:id",
     requireAuth(auth),
+    requireOrg(auth),
     orgContext(),
     validateParams(BlockIdParam),
     async (c) => {
+      const authCtx = c.get("auth");
       const { id } = c.req.valid("param");
+
+      /* Verify the block's workflow belongs to the user's org */
+      const block = await db.query.blocks.findFirst({
+        where: eq(blocksTable.id, id),
+      });
+      if (!block) return notFound(c, "Block");
+
+      const workflow = await db.query.workflows.findFirst({
+        where: eq(workflowsTable.id, block.workflowId),
+      });
+      if (!workflow || workflow.orgId !== authCtx.orgId) return notFound(c, "Block");
 
       await db.delete(blocksTable).where(eq(blocksTable.id, id));
       return ok(c, { message: "Block deleted" });

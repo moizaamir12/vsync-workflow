@@ -13,9 +13,9 @@ export const cache = pgTable(
   "cache",
   {
     key: text("key").notNull(),
-    // TODO(schema): Add foreign key reference to organizations.id for data integrity.
     orgId: uuid("org_id").notNull(),
     value: jsonb("value").notNull(),
+    expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").defaultNow(),
     accessedAt: timestamp("accessed_at").defaultNow(),
     accessCount: integer("access_count").default(0),
@@ -27,4 +27,3 @@ export const cache = pgTable(
     }),
   ],
 );
-// TODO(schema): This schema differs from setup.ts (which has no org_id, accessed_at, or access_count columns). Reconcile.
