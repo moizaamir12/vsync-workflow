@@ -19,7 +19,6 @@ export const workflows = pgTable("workflows", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => nanoid()),
-  // TODO(perf): Add index on org_id — findByOrg() queries this column frequently.
   orgId: uuid("org_id")
     .notNull()
     .references(() => organizations.id),
@@ -49,6 +48,7 @@ export const workflows = pgTable("workflows", {
 },
 (table) => [
   unique("workflows_public_slug_unique").on(table.publicSlug),
+  index("workflows_org_id_idx").on(table.orgId),
 ]);
 
 /** An immutable snapshot of a workflow's configuration. */
@@ -105,7 +105,6 @@ export const blocks = pgTable(
   ],
 );
 
-// TODO(schema): This schema is completely different from setup.ts (which has org_id, encrypted_value, iv). Reconcile before production use.
 /** Encrypted key-value pairs scoped to a workflow. */
 export const secrets = pgTable(
   "secrets",
@@ -113,8 +112,7 @@ export const secrets = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => nanoid()),
-    // TODO: Add onDelete: "cascade" so secrets are cleaned up when a workflow is deleted.
-    workflowId: text("workflow_id").references(() => workflows.id),
+    workflowId: text("workflow_id").references(() => workflows.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     value: text("value").notNull(),
     createdAt: timestamp("created_at").defaultNow(),

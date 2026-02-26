@@ -38,13 +38,27 @@ async function resolveSession(
 
   if (!session?.user) return null;
 
+  /**
+   * Better Auth's organization plugin extends the session object with
+   * additional fields. We extract them safely with runtime type checks
+   * to avoid unsafe double-casts.
+   */
+  const sessionRecord = session.session as Record<string, unknown>;
+  const rawOrgId = sessionRecord["activeOrganizationId"];
+  const rawRole = sessionRecord["role"];
+
+  const orgId = typeof rawOrgId === "string" ? rawOrgId : "";
+  const role: RoleName =
+    typeof rawRole === "string" && rawRole in ROLE_HIERARCHY
+      ? (rawRole as RoleName)
+      : "member";
+
   return {
     userId: session.user.id,
     email: session.user.email,
     name: session.user.name ?? "",
-    // TODO: Replace unsafe double-casting with proper Better Auth session types or type guards.
-    orgId: (session.session as Record<string, unknown>)["activeOrganizationId"] as string ?? "",
-    role: ((session.session as Record<string, unknown>)["role"] as RoleName) ?? "member",
+    orgId,
+    role,
     sessionId: session.session.id,
   };
 }

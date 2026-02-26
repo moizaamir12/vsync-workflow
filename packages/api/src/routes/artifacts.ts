@@ -67,24 +67,18 @@ export function artifactRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Get artifact ──────────────────────────────────────────── */
 
-  // TODO(auth): Verify the authenticated user's org has access to this artifact.
-  app.get("/:id", requireAuth(auth), validateParams(IdParam), async (c) => {
+  app.get("/:id", requireAuth(auth), requireOrg(auth), orgContext(), validateParams(IdParam), async (c) => {
+    const authCtx = c.get("auth");
     const { id } = c.req.valid("param");
 
-    const { eq } = await import("drizzle-orm");
+    const { eq, and } = await import("drizzle-orm");
     const { artifacts } = await import("@vsync/db");
     const artifact = await db.query.artifacts.findFirst({
-      where: eq(artifacts.id, id),
+      where: and(eq(artifacts.id, id), eq(artifacts.orgId, authCtx.orgId)),
     });
 
     if (!artifact) return notFound(c, "Artifact");
 
-    // TODO: Implement presigned S3 URL generation for artifact downloads.
-    /**
-     * In a full implementation this would generate a presigned
-     * S3 URL (for S3 storage) or a local download path (for
-     * local storage). For now we return the stored metadata.
-     */
     return ok(c, artifact);
   });
 

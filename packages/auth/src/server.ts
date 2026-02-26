@@ -121,9 +121,12 @@ export function createAuthServer(db: Database) {
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {
         if (!resend) {
-          /* Log to console in development when Resend isn't configured */
-          // TODO(security): Remove console logging of verification URLs in production — tokens in logs are a security risk.
-          console.log(`[auth] Verification email for ${user.email}: ${url}`);
+          if (process.env["NODE_ENV"] !== "production") {
+            /* Only log verification URLs in development — tokens in logs are a security risk */
+            console.log(`[auth] Verification email for ${user.email}: ${url}`);
+          } else {
+            console.warn(`[auth] Resend not configured — verification email for ${user.email} was not sent`);
+          }
           return;
         }
         await resend.emails.send({

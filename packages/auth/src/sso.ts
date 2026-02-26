@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { Database } from "@vsync/db";
 import { organizations } from "@vsync/db";
@@ -53,6 +54,53 @@ async function requireEnterprisePlan(
 }
 
 /**
+ * Validates a SAML configuration before persisting it.
+ * Checks:
+ * - Certificate is valid PEM format and parses as X.509
+ * - Certificate has not expired
+ * - SSO URL uses HTTPS (required for production security)
+ */
+function validateSAMLConfig(config: SAMLConfig): void {
+  /* Require HTTPS for the SSO endpoint */
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(config.ssoUrl);
+  } catch {
+    throw new Error("Invalid SSO URL format");
+  }
+  if (parsedUrl.protocol !== "https:") {
+    throw new Error("SSO URL must use HTTPS");
+  }
+
+  /* Validate the certificate is PEM-formatted X.509 */
+  const cert = config.certificate.trim();
+  if (!cert.startsWith("-----BEGIN CERTIFICATE-----") || !cert.endsWith("-----END CERTIFICATE-----")) {
+    throw new Error("SSO certificate must be in PEM format (BEGIN/END CERTIFICATE markers)");
+  }
+
+  try {
+    const x509 = new crypto.X509Certificate(cert);
+
+    /* Check the certificate has not expired */
+    const notAfter = new Date(x509.validTo);
+    if (notAfter.getTime() <= Date.now()) {
+      throw new Error(`SSO certificate expired on ${x509.validTo}`);
+    }
+
+    /* Check the certificate is not yet-to-be-valid */
+    const notBefore = new Date(x509.validFrom);
+    if (notBefore.getTime() > Date.now()) {
+      throw new Error(`SSO certificate is not valid until ${x509.validFrom}`);
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("SSO certificate")) {
+      throw err;
+    }
+    throw new Error("SSO certificate is not a valid X.509 certificate");
+  }
+}
+
+/**
  * Configures SAML 2.0 SSO for an organization.
  * Stores the IdP metadata in the organizations.ssoConfig jsonb field.
  */
@@ -63,7 +111,8 @@ export async function configureSAML(
 ): Promise<void> {
   await requireEnterprisePlan(db, orgId);
 
-  // TODO(security): Validate SSO certificate (format, expiry, signature) and require HTTPS for ssoUrl.
+  validateSAMLConfig(config);
+
   const ssoConfig: SSOConfigRecord = {
     provider: "saml",
     entityId: config.entityId,

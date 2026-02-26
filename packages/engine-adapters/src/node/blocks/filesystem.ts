@@ -203,22 +203,40 @@ async function executeAppend(
 /* ── Path validation ──────────────────────────────────── */
 
 /**
- * Validate a path to prevent directory traversal attacks.
- * Rejects paths containing `..` segments.
+ * Sandbox base directory. All filesystem operations are confined
+ * to this directory. Defaults to the current working directory,
+ * overridable via VSYNC_FS_SANDBOX_DIR env var.
+ */
+const SANDBOX_DIR = path.resolve(
+  process.env["VSYNC_FS_SANDBOX_DIR"] ?? process.cwd(),
+);
+
+/**
+ * Validate a path to prevent directory traversal and sandbox escape.
+ * Rejects paths containing `..` segments and paths that resolve
+ * outside the sandbox directory.
  */
 export function validatePath(inputPath: string): string {
   const normalized = path.normalize(inputPath);
 
-  // TODO(security): Path validation only checks for ".." but allows absolute paths — could escape intended directory scope.
   /* Block directory traversal */
   if (normalized.includes("..")) {
     throw new Error(
-      `Path validation failed: "${inputPath}" contains directory traversal (".."). ` +
-      "Use absolute paths or paths relative to the working directory.",
+      `Path validation failed: "${inputPath}" contains directory traversal ("..").`,
     );
   }
 
-  return normalized;
+  /* Resolve relative to the sandbox — absolute paths are resolved as-is */
+  const resolved = path.resolve(SANDBOX_DIR, normalized);
+
+  /* Ensure the resolved path is within the sandbox boundary */
+  if (!resolved.startsWith(SANDBOX_DIR + path.sep) && resolved !== SANDBOX_DIR) {
+    throw new Error(
+      `Path validation failed: "${inputPath}" resolves outside the allowed directory scope.`,
+    );
+  }
+
+  return resolved;
 }
 
 /* ── Helpers ──────────────────────────────────────────── */

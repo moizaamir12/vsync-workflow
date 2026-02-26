@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { AuthInstance } from "@vsync/auth";
 import { requireAuth, requireOrg } from "@vsync/auth";
 import type { Database } from "@vsync/db";
@@ -81,11 +81,11 @@ export function deviceRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Get device ────────────────────────────────────────────── */
 
-  // TODO(auth): Verify the device belongs to the user's org before returning data.
-  app.get("/:id", requireAuth(auth), validateParams(IdParam), async (c) => {
+  app.get("/:id", requireAuth(auth), requireOrg(auth), orgContext(), validateParams(IdParam), async (c) => {
+    const authCtx = c.get("auth");
     const { id } = c.req.valid("param");
     const device = await db.query.devices.findFirst({
-      where: eq(devices.id, id),
+      where: and(eq(devices.id, id), eq(devices.orgId, authCtx.orgId)),
     });
     if (!device) return notFound(c, "Device");
     return ok(c, device);

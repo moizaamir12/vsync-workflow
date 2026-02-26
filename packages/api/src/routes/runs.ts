@@ -134,19 +134,23 @@ export function runRoutes(
 
   /* ── Get run with steps ────────────────────────────────────── */
 
-  // TODO(auth): Verify the authenticated user's org owns this run before returning data.
-  app.get("/runs/:id", requireAuth(auth), validateParams(IdParam), async (c) => {
+  app.get("/runs/:id", requireAuth(auth), requireOrg(auth), orgContext(), validateParams(IdParam), async (c) => {
+    const authCtx = c.get("auth");
     const { id } = c.req.valid("param");
     const run = await runRepo.findById(id);
     if (!run) return notFound(c, "Run");
+    if (run.orgId && run.orgId !== authCtx.orgId) return notFound(c, "Run");
     return ok(c, run);
   });
 
   /* ── Delete run ────────────────────────────────────────────── */
 
-  // TODO(auth): Verify org ownership before allowing deletion — currently any authenticated user can delete any run.
-  app.delete("/runs/:id", requireAuth(auth), orgContext(), validateParams(IdParam), async (c) => {
+  app.delete("/runs/:id", requireAuth(auth), requireOrg(auth), orgContext(), validateParams(IdParam), async (c) => {
+    const authCtx = c.get("auth");
     const { id } = c.req.valid("param");
+    const run = await runRepo.findById(id);
+    if (!run) return notFound(c, "Run");
+    if (run.orgId && run.orgId !== authCtx.orgId) return notFound(c, "Run");
     const { eq } = await import("drizzle-orm");
     const { runs } = await import("@vsync/db");
     await db.delete(runs).where(eq(runs.id, id));
