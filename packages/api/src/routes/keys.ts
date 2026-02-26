@@ -34,6 +34,7 @@ const ResolveKeySchema = z.object({
   workflowId: z.string().optional(),
 });
 
+// TODO(security): Replace placeholder Base64 encoding with real AES-256-GCM encryption. Current implementation stores plaintext in Base64 — not secure for production.
 /**
  * Placeholder encryption — a production system would use
  * AES-256-GCM with a KMS-managed key. This demonstrates

@@ -99,6 +99,7 @@ export function blockRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Update block ──────────────────────────────────────────── */
 
+  // TODO(auth): Verify the workflow belongs to the user's org before allowing block updates.
   app.patch(
     "/blocks/:id",
     requireAuth(auth),
@@ -146,6 +147,7 @@ export function blockRoutes(auth: AuthInstance, db: Database) {
     async (c) => {
       const { blockIds } = c.req.valid("json");
 
+      // TODO: Add error handling for partial transaction failures — if one update fails, roll back all changes.
       try {
         await db.transaction(async (tx) => {
           for (let i = 0; i < blockIds.length; i++) {

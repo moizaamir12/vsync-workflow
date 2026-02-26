@@ -42,6 +42,7 @@ async function resolveSession(
     userId: session.user.id,
     email: session.user.email,
     name: session.user.name ?? "",
+    // TODO: Replace unsafe double-casting with proper Better Auth session types or type guards.
     orgId: (session.session as Record<string, unknown>)["activeOrganizationId"] as string ?? "",
     role: ((session.session as Record<string, unknown>)["role"] as RoleName) ?? "member",
     sessionId: session.session.id,

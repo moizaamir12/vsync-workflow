@@ -11,9 +11,11 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// TODO(perf): Add index on user_id for fast session lookups by user.
 /** Active login sessions — one per device/browser. */
 export const sessions = pgTable("sessions", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  // TODO: Add onDelete: "cascade" so sessions are cleaned up when a user is deleted.
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id),
@@ -25,9 +27,11 @@ export const sessions = pgTable("sessions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// TODO(perf): Add index on user_id for fast account lookups by user.
 /** Linked OAuth / SSO provider accounts. */
 export const accounts = pgTable("accounts", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  // TODO: Add onDelete: "cascade" so accounts are cleaned up when a user is deleted.
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id),
@@ -39,9 +43,10 @@ export const accounts = pgTable("accounts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// TODO(perf): Add composite index on (identifier, expires_at) for efficient token lookups.
 /** Email / phone verification tokens. */
 export const verifications = pgTable("verifications", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),

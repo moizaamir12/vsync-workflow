@@ -325,6 +325,7 @@ export class Interpreter {
 
   /* ── Deferred execution ─────────────────────────────── */
 
+  // TODO: Enforce deferConcurrency limit — the config value is accepted but never actually used to limit concurrent deferred executions.
   private async executeDeferredIteration(
     blocks: Block[],
     targetIndex: number,

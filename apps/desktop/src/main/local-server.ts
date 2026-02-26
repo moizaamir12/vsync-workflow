@@ -12,7 +12,12 @@ import {
   SqliteArtifactRepository,
 } from "@vsync/db";
 import { createNodeInterpreter } from "@vsync/engine-adapters";
+import type { RunConfig } from "@vsync/engine";
+import type { Block } from "@vsync/shared-types";
 import crypto from "node:crypto";
+
+/** Hono env typing so `c.set("requestId", …)` compiles cleanly. */
+type LocalEnv = { Variables: { requestId: string } };
 
 export interface LocalServerHandle {
   port: number;
@@ -30,7 +35,7 @@ export interface LocalServerHandle {
  */
 export function startLocalServer(db: SqliteDatabase): Promise<LocalServerHandle> {
   return new Promise((resolve) => {
-    const app = new Hono();
+    const app = new Hono<LocalEnv>();
 
     /* ── Middleware ──────────────────────────────────────────── */
 
@@ -179,23 +184,46 @@ export function startLocalServer(db: SqliteDatabase): Promise<LocalServerHandle>
         startedAt: new Date(),
       });
 
+      // TODO: Add retry logic for failed workflow executions instead of fire-and-forget — the async IIFE swallows errors silently.
       /* Fire-and-forget execution — the run status is updated asynchronously */
       void (async () => {
         try {
-          const result = await interpreter.execute({
-            blocks: activeVersion.blocks.map((b) => ({
-              id: b.id,
-              type: b.type,
-              name: b.name,
-              properties: (b.logic ?? {}) as Record<string, unknown>,
-              conditions: b.conditions as Record<string, unknown> | undefined,
-            })),
-          });
+          const runConfig: RunConfig = {
+            runId: run.id,
+            orgId: c.req.header("x-org-id") ?? "",
+            deviceId: "desktop",
+            workflowVersion: {
+              workflowId,
+              version: activeVersion.version.version,
+              status: (activeVersion.version.status ?? "published") as "draft" | "published",
+              triggerType: (activeVersion.version.triggerType ?? "interactive") as "interactive",
+              triggerConfig: {},
+              executionEnvironments: ["desktop"],
+              blocks: activeVersion.blocks.map((b) => ({
+                id: b.id,
+                workflowId: b.workflowId,
+                workflowVersion: b.workflowVersion,
+                name: b.name,
+                type: b.type as Block["type"],
+                logic: (b.logic ?? {}) as Record<string, unknown>,
+                conditions: b.conditions as Block["conditions"],
+                order: b.order,
+                notes: b.notes ?? undefined,
+              })),
+              groups: [],
+              changelog: "",
+              createdAt: String(activeVersion.version.createdAt ?? new Date().toISOString()),
+              updatedAt: String(activeVersion.version.updatedAt ?? new Date().toISOString()),
+            },
+            event: {},
+          };
+
+          const result = await interpreter.executeRun(runConfig);
           await runRepo.updateStatus(run.id, result.status === "completed" ? "completed" : "failed", {
             completedAt: new Date(),
             durationMs: result.durationMs,
             stepsJson: result.steps as unknown as Record<string, unknown>,
-            errorMessage: result.error ?? undefined,
+            errorMessage: result.errorMessage,
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Unknown error";

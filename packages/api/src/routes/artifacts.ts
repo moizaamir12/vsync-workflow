@@ -67,6 +67,7 @@ export function artifactRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Get artifact ──────────────────────────────────────────── */
 
+  // TODO(auth): Verify the authenticated user's org has access to this artifact.
   app.get("/:id", requireAuth(auth), validateParams(IdParam), async (c) => {
     const { id } = c.req.valid("param");
 
@@ -78,6 +79,7 @@ export function artifactRoutes(auth: AuthInstance, db: Database) {
 
     if (!artifact) return notFound(c, "Artifact");
 
+    // TODO: Implement presigned S3 URL generation for artifact downloads.
     /**
      * In a full implementation this would generate a presigned
      * S3 URL (for S3 storage) or a local download path (for

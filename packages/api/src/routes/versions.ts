@@ -56,6 +56,7 @@ export function versionRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Get version with blocks ───────────────────────────────── */
 
+  // TODO(auth): Verify org ownership of the workflow before returning version data.
   app.get("/:id/versions/:v", requireAuth(auth), validateParams(VersionParam), async (c) => {
     const { id, v } = c.req.valid("param");
     const versionNum = parseInt(v, 10);

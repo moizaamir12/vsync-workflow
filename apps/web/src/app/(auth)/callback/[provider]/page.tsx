@@ -36,7 +36,7 @@ function CallbackContent() {
 
     async function exchangeCode() {
       try {
-        const res = await fetch(`${API_URL}/api/auth/callback/${provider}`, {
+        const res = await fetch(`${API_URL}/api/v1/auth/callback/${provider}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

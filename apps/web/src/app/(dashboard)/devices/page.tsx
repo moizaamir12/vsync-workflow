@@ -283,6 +283,7 @@ export default function DevicesPage() {
   const [regArch, setRegArch] = useState("");
   const [regEnv, setRegEnv] = useState("desktop");
 
+  // TODO: Add error state UI when device fetch fails — currently only shows loading skeleton.
   const devices = data?.data ?? [];
   const filtered = search
     ? devices.filter(

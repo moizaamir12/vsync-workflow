@@ -53,6 +53,7 @@ export async function fetchExecutor(
   /* Execute with retry */
   let lastError: Error | null = null;
 
+  // TODO: Validate that maxRetries is a positive number before entering retry loop — negative values could cause unexpected behavior.
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     if (attempt > 0) {
       const delay = retryDelayMs * Math.pow(backoffMultiplier, attempt - 1);
@@ -86,6 +87,7 @@ export async function fetchExecutor(
     }
   }
 
+  // TODO: Handle edge case where lastError could be null after retry loop completes.
   throw lastError ?? new Error("Fetch failed after retries");
 }
 

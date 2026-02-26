@@ -1,4 +1,5 @@
-import { autoUpdater } from "electron-updater";
+import pkg from "electron-updater";
+const { autoUpdater } = pkg;
 import log from "electron-log";
 
 /** How often (ms) to check for updates after the initial check. */

@@ -119,6 +119,7 @@ export class ConditionEvaluator {
     if (Array.isArray(left)) {
       return left.includes(right);
     }
+    // TODO: Implement "contains" check for objects — currently always returns false for non-string/array values.
     return false;
   }
 

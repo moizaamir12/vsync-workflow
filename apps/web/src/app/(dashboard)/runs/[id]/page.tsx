@@ -51,6 +51,7 @@ function useRunLive(runId: string, isLive: boolean) {
     let cancelled = false;
 
     function connect() {
+      // TODO: Validate WebSocket URL format before connecting — the .replace(/^http/, "ws") approach is fragile with non-standard protocols.
       const url = api.runs.liveUrl(runId).replace(/^http/, "ws");
       const ws = new WebSocket(url);
       wsRef.current = ws;
@@ -66,6 +67,7 @@ function useRunLive(runId: string, isLive: boolean) {
         if (cancelled) return;
         setWsConnected(false);
 
+        // TODO: Add exponential backoff for WebSocket reconnection and a maximum retry limit with user-visible feedback.
         /* Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s */
         const delay = Math.min(1000 * Math.pow(2, retriesRef.current), 30000);
         retriesRef.current += 1;

@@ -31,6 +31,7 @@ export class OrgRepository {
     return row;
   }
 
+  // TODO(validation): Validate that role is a valid RoleName from the ROLE_HIERARCHY before inserting.
   /** Add a user to an organization with a specific role. */
   async addMember(orgId: string, userId: string, role = "member") {
     const [row] = await this.db
@@ -57,4 +58,8 @@ export class OrgRepository {
     });
     return member?.role ?? null;
   }
+
+  // TODO: Add update() method to modify org properties (name, slug, plan, etc.)
+  // TODO: Add removeMember() method
+  // TODO: Add updateMemberRole() method
 }

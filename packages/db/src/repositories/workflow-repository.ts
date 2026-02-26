@@ -34,6 +34,7 @@ export class WorkflowRepository {
     });
   }
 
+  // TODO: Handle case where update returns empty array (no matching row) — currently returns undefined silently.
   /** Partial update of a workflow's mutable fields. */
   async update(id: string, data: Partial<typeof workflows.$inferInsert>) {
     const [row] = await this.db

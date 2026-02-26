@@ -12,6 +12,7 @@ export const deviceKeys = {
 
 /* ── Queries ─────────────────────────────────────────────────── */
 
+// TODO: Add refetchInterval to keep device heartbeat status fresh — currently only fetched on mount.
 export function useDevices() {
   return useQuery({
     queryKey: deviceKeys.lists(),

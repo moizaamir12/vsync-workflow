@@ -18,6 +18,7 @@ export function eventRoutes(auth: AuthInstance, wsManager: WSManager) {
 
   app.get("/", requireAuth(auth), async (c) => {
     const authCtx = c.get("auth");
+    // TODO(validation): Validate channel names to prevent clients from subscribing to arbitrary internal channels.
     const channelsParam = c.req.query("channels") ?? "";
     const channels = channelsParam
       .split(",")

@@ -68,6 +68,7 @@ export function registerIpcHandlers(apiPort: number): void {
 
   /* ── Auth token (encrypted via safeStorage) ─────────── */
 
+  // TODO(auth): Validate the decrypted token is a valid JWT (not expired, proper structure) before returning it.
   ipcMain.handle("desktop:get-auth-token", () => {
     const encrypted = store.get("encryptedToken");
     if (!encrypted) return null;

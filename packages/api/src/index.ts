@@ -71,6 +71,17 @@ export function createApp(auth: AuthInstance, db: Database, config?: AppConfig):
     publicService = new PublicWorkflowService(db, wsManager, config.interpreter);
   }
 
+  /* ── Better Auth native handler ──────────────────────────────
+   * The Better Auth client SDK (used by login/signup pages) makes
+   * requests to /api/auth/* (e.g. /api/auth/sign-up/email).
+   * We forward those directly to Better Auth's built-in handler
+   * so the SDK works out of the box.
+   * ──────────────────────────────────────────────────────────── */
+
+  app.on(["GET", "POST"], "/api/auth/*", (c) => {
+    return auth.handler(c.req.raw);
+  });
+
   /* ── Routes ────────────────────────────────────────────────── */
 
   mountRoutes(

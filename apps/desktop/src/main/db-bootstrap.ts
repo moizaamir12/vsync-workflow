@@ -138,8 +138,8 @@ CREATE TABLE IF NOT EXISTS blocks (
   updated_at INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_blocks_wf_version_idx ON blocks(workflow_id, workflow_version);
-CREATE INDEX IF NOT EXISTS sqlite_blocks_wf_version_order_idx ON blocks(workflow_id, workflow_version, "order");
+CREATE INDEX IF NOT EXISTS idx_blocks_wf_version ON blocks(workflow_id, workflow_version);
+CREATE INDEX IF NOT EXISTS idx_blocks_wf_version_order ON blocks(workflow_id, workflow_version, "order");
 
 CREATE TABLE IF NOT EXISTS secrets (
   id TEXT PRIMARY KEY,
@@ -168,10 +168,10 @@ CREATE TABLE IF NOT EXISTS runs (
   created_at INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_runs_workflow_idx ON runs(workflow_id);
-CREATE INDEX IF NOT EXISTS sqlite_runs_org_idx ON runs(org_id);
-CREATE INDEX IF NOT EXISTS sqlite_runs_status_idx ON runs(status);
-CREATE INDEX IF NOT EXISTS sqlite_runs_started_at_idx ON runs(started_at);
+CREATE INDEX IF NOT EXISTS idx_runs_workflow ON runs(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_runs_org ON runs(org_id);
+CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
+CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs(started_at);
 
 CREATE TABLE IF NOT EXISTS artifacts (
   id TEXT PRIMARY KEY,
@@ -194,9 +194,9 @@ CREATE TABLE IF NOT EXISTS artifacts (
   created_at INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_artifacts_run_idx ON artifacts(run_id);
-CREATE INDEX IF NOT EXISTS sqlite_artifacts_workflow_idx ON artifacts(workflow_id);
-CREATE INDEX IF NOT EXISTS sqlite_artifacts_org_idx ON artifacts(org_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_run ON artifacts(run_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_workflow ON artifacts(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_org ON artifacts(org_id);
 
 CREATE TABLE IF NOT EXISTS public_runs (
   id TEXT PRIMARY KEY,
@@ -216,10 +216,10 @@ CREATE TABLE IF NOT EXISTS public_runs (
   created_at INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_public_runs_workflow_idx ON public_runs(workflow_id);
-CREATE INDEX IF NOT EXISTS sqlite_public_runs_slug_idx ON public_runs(public_slug);
-CREATE INDEX IF NOT EXISTS sqlite_public_runs_ip_hash_idx ON public_runs(ip_hash);
-CREATE INDEX IF NOT EXISTS sqlite_public_runs_created_at_idx ON public_runs(created_at);
+CREATE INDEX IF NOT EXISTS idx_public_runs_workflow ON public_runs(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_public_runs_slug ON public_runs(public_slug);
+CREATE INDEX IF NOT EXISTS idx_public_runs_ip_hash ON public_runs(ip_hash);
+CREATE INDEX IF NOT EXISTS idx_public_runs_created_at ON public_runs(created_at);
 
 CREATE TABLE IF NOT EXISTS cache (
   key TEXT NOT NULL,
@@ -272,8 +272,8 @@ CREATE TABLE IF NOT EXISTS keys (
   UNIQUE(org_id, name)
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_keys_org_idx ON keys(org_id);
-CREATE INDEX IF NOT EXISTS sqlite_keys_workflow_idx ON keys(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_keys_org ON keys(org_id);
+CREATE INDEX IF NOT EXISTS idx_keys_workflow ON keys(workflow_id);
 
 CREATE TABLE IF NOT EXISTS key_audit_log (
   id TEXT PRIMARY KEY,
@@ -286,8 +286,8 @@ CREATE TABLE IF NOT EXISTS key_audit_log (
   created_at INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_key_audit_key_idx ON key_audit_log(key_id);
-CREATE INDEX IF NOT EXISTS sqlite_key_audit_performer_idx ON key_audit_log(performed_by);
+CREATE INDEX IF NOT EXISTS idx_key_audit_key ON key_audit_log(key_id);
+CREATE INDEX IF NOT EXISTS idx_key_audit_performer ON key_audit_log(performed_by);
 
 CREATE TABLE IF NOT EXISTS chats (
   id TEXT PRIMARY KEY,
@@ -319,6 +319,6 @@ CREATE TABLE IF NOT EXISTS sync_queue (
   created_at INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS sqlite_sync_queue_synced_idx ON sync_queue(synced_at);
-CREATE INDEX IF NOT EXISTS sqlite_sync_queue_table_idx ON sync_queue(table_name);
+CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(synced_at);
+CREATE INDEX IF NOT EXISTS idx_sync_queue_table ON sync_queue(table_name);
 `;

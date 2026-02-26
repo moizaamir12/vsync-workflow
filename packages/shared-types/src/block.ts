@@ -3,6 +3,7 @@
  * Each type maps to a dedicated adapter in @vsync/engine-adapters
  * that knows how to execute its logic payload.
  */
+// TODO: Add "code_typescript" and "code_sandbox" to BlockType union — the engine has handlers for these but they're missing from the type.
 export type BlockType =
   | "object"
   | "string"

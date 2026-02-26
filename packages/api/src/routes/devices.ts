@@ -81,6 +81,7 @@ export function deviceRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Get device ────────────────────────────────────────────── */
 
+  // TODO(auth): Verify the device belongs to the user's org before returning data.
   app.get("/:id", requireAuth(auth), validateParams(IdParam), async (c) => {
     const { id } = c.req.valid("param");
     const device = await db.query.devices.findFirst({

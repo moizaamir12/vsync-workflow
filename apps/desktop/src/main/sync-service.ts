@@ -71,6 +71,7 @@ export class SyncService {
       return;
     }
 
+    // TODO: Add retry logic with exponential backoff for sync failures — currently errors are only logged with no recovery.
     try {
       await this.push();
       await this.pull();
@@ -141,6 +142,7 @@ export class SyncService {
       return;
     }
 
+    // TODO(validation): Validate response structure before accessing fields — partial JSON parse failures will crash the sync.
     const body = (await response.json()) as {
       data: { table: string; rows: Record<string, unknown>[] }[];
     };

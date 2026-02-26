@@ -122,6 +122,7 @@ export function createAuthServer(db: Database) {
       sendVerificationEmail: async ({ user, url }) => {
         if (!resend) {
           /* Log to console in development when Resend isn't configured */
+          // TODO(security): Remove console logging of verification URLs in production — tokens in logs are a security risk.
           console.log(`[auth] Verification email for ${user.email}: ${url}`);
           return;
         }
@@ -140,6 +141,14 @@ export function createAuthServer(db: Database) {
     rateLimit: {
       window: 60,   // 1 minute window
       max: 5,       // 5 attempts per window per IP
+    },
+
+    advanced: {
+      database: {
+        /* The PostgreSQL schema uses UUID columns for all auth table IDs.
+           Better Auth defaults to nanoid which is rejected by the uuid type. */
+        generateId: "uuid",
+      },
     },
   });
 

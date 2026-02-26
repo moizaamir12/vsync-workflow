@@ -101,6 +101,7 @@ export function organizationRoutes(auth: AuthInstance, db: Database) {
       return forbidden(c, "Only the org owner can update settings");
     }
 
+    // TODO: Move dynamic imports to module scope to avoid timing issues and improve readability.
     const body = c.req.valid("json");
     const [updated] = await db
       .update((await import("@vsync/db")).organizations)
@@ -123,6 +124,7 @@ export function organizationRoutes(auth: AuthInstance, db: Database) {
     }
 
     const { email, role } = c.req.valid("json");
+    // TODO(validation): Check if user is already an org member before sending invite.
     const user = await userRepo.findByEmail(email);
     if (!user) return notFound(c, "User");
 

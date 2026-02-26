@@ -980,6 +980,8 @@ export default function OnboardingPage() {
         });
       }
 
+      // TODO: Add idempotency keys or transaction semantics to prevent duplicate workflows if the user resubmits the form.
+
       // 4. Create blocks, applying any custom values
       for (const block of selectedTemplate.blocks) {
         const logic = { ...block.logic };

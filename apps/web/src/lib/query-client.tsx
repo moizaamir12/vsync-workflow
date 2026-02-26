@@ -16,6 +16,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 30_000,
+            // TODO(auth): Add global 401 error handling — redirect to /login or trigger token refresh when API returns 401 Unauthorized.
             retry: 1,
             refetchOnWindowFocus: false,
           },

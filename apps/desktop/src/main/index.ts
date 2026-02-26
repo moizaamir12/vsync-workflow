@@ -99,7 +99,8 @@ function createMainWindow(apiPort: number): BrowserWindow {
     minHeight: 600,
     title: "V Sync",
     webPreferences: {
-      preload: path.join(__dirname, "..", "preload", "index.js"),
+      preload: path.join(__dirname, "..", "preload", "index.cjs"),
+      /* Preload must remain CJS for Electron sandbox compatibility */
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,

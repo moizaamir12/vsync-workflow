@@ -47,6 +47,7 @@ export function useRun(id: string) {
  * Fetches all workflows + recent runs in parallel and computes
  * totals, success rate, etc. on the client side.
  */
+// TODO(perf): useDashboardStats fetches ALL workflows and runs without pagination — will be slow with large datasets. Add server-side aggregation.
 export function useDashboardStats() {
   return useQuery({
     queryKey: runKeys.stats(),

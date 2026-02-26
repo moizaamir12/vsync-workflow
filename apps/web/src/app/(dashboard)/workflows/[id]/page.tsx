@@ -113,6 +113,7 @@ export default function WorkflowBuilderPage() {
     }
   }, [triggerMutation, workflowId, router]);
 
+  // TODO: Add error state handling — if workflow data fails to load, the page shows a loading spinner indefinitely.
   const isLoading = loadingWorkflow || loadingBlocks;
 
   return (

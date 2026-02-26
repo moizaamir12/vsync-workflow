@@ -58,6 +58,7 @@ export function createApiClient(baseUrl: string, sessionToken?: string) {
       headers,
     });
 
+    // TODO: Handle non-JSON responses gracefully — res.json() will throw if the API returns HTML (e.g. 502 gateway error).
     const body = (await res.json()) as ApiResponse<T>;
 
     if (!res.ok) {
@@ -505,6 +506,7 @@ export function createApiClient(baseUrl: string, sessionToken?: string) {
 
 /* ── Singleton ───────────────────────────────────────────────── */
 
+// TODO: Consolidate API_URL into a single shared constant — it's duplicated in 7+ files (api.ts, auth-client.ts, verify/page.tsx, forgot-password/page.tsx, reset-password/page.tsx, callback/page.tsx, sso/page.tsx).
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export const api = createApiClient(API_URL);

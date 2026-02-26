@@ -141,6 +141,7 @@ function useOrg(): { org: OrgData | null; loading: boolean } {
       .then((res) => {
         /* Use the first org (active org is tracked via cookie) */
         const first = res.data?.[0];
+        // TODO: Replace unsafe type cast with proper type narrowing or a typed API response.
         if (first) setOrg({ id: first.id, name: first.name, slug: first.slug, plan: (first as unknown as { plan?: string }).plan ?? "free" });
       })
       .finally(() => setLoading(false));
@@ -276,6 +277,7 @@ function MembersTab() {
         })),
       );
     } catch {
+      // TODO: Add retry button when member list fails to load, and distinguish between network errors and permission errors.
       toast.error("Failed to load members");
     } finally {
       setLoading(false);

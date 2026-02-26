@@ -8,6 +8,7 @@ import type { Database } from "../client.js";
 export class CacheRepository {
   constructor(private readonly db: Database) {}
 
+  // TODO: Check expiresAt before returning cached values — currently cache entries never expire.
   /** Retrieve a cached value and bump access counters. */
   async get(key: string, orgId: string) {
     const row = await this.db.query.cache.findFirst({
@@ -51,3 +52,4 @@ export class CacheRepository {
     await this.db.delete(cache).where(eq(cache.orgId, orgId));
   }
 }
+// TODO: Add cleanup method to purge expired cache entries (e.g. deleteExpired()).

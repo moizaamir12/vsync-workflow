@@ -30,7 +30,7 @@ function VerifyContent() {
 
     async function verifyToken() {
       try {
-        const res = await fetch(`${API_URL}/api/auth/verify-email`, {
+        const res = await fetch(`${API_URL}/api/v1/auth/verify-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
@@ -89,7 +89,7 @@ function VerifyContent() {
   const handleResend = useCallback(async () => {
     setResending(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/send-verification-email`, {
+      const res = await fetch(`${API_URL}/api/v1/auth/send-verification-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -19,6 +19,7 @@ export const workflows = pgTable("workflows", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => nanoid()),
+  // TODO(perf): Add index on org_id — findByOrg() queries this column frequently.
   orgId: uuid("org_id")
     .notNull()
     .references(() => organizations.id),
@@ -104,6 +105,7 @@ export const blocks = pgTable(
   ],
 );
 
+// TODO(schema): This schema is completely different from setup.ts (which has org_id, encrypted_value, iv). Reconcile before production use.
 /** Encrypted key-value pairs scoped to a workflow. */
 export const secrets = pgTable(
   "secrets",
@@ -111,6 +113,7 @@ export const secrets = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => nanoid()),
+    // TODO: Add onDelete: "cascade" so secrets are cleaned up when a workflow is deleted.
     workflowId: text("workflow_id").references(() => workflows.id),
     key: text("key").notNull(),
     value: text("value").notNull(),

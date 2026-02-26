@@ -221,6 +221,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   /* Load session */
   useEffect(() => {
+    // TODO(auth): Add session polling or expiry detection — currently the header shows stale user data if the session expires after initial load.
     void authClient.getSession().then(setSession);
   }, []);
 

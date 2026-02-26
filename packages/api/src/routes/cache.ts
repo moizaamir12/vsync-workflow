@@ -53,6 +53,7 @@ export function cacheRoutes(auth: AuthInstance, db: Database) {
 
   /* ── Clear org cache ───────────────────────────────────────── */
 
+  // TODO(validation): Validate request body before processing cache deletion.
   app.delete("/", requireAuth(auth), requireOrg(auth), orgContext(), async (c) => {
     const authCtx = c.get("auth");
     await repo.clearOrg(authCtx.orgId);

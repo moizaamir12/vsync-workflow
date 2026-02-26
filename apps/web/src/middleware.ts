@@ -61,6 +61,7 @@ export function middleware(request: NextRequest) {
     request.cookies.get("better-auth.session_token")?.value;
   const activeOrg = request.cookies.get("active_org")?.value;
 
+  // TODO(auth): Add token refresh logic — if the session token is expired, attempt a refresh before redirecting to login.
   const hasSession = !!sessionToken;
   const hasOrg = !!activeOrg;
 

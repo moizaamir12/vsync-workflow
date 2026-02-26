@@ -63,6 +63,7 @@ export async function configureSAML(
 ): Promise<void> {
   await requireEnterprisePlan(db, orgId);
 
+  // TODO(security): Validate SSO certificate (format, expiry, signature) and require HTTPS for ssoUrl.
   const ssoConfig: SSOConfigRecord = {
     provider: "saml",
     entityId: config.entityId,
@@ -141,5 +142,6 @@ export async function handleSSOCallback(
    * This function is the extension point for custom logic
    * (e.g. attribute mapping, JIT provisioning).
    */
+  // TODO: Implement SSO callback handler — currently throws "Not implemented" and will crash if SSO is used.
   throw new Error("Not implemented");
 }

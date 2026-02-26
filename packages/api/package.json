@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "dev": "tsc && node --env-file=../../.env --watch dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/server.js"

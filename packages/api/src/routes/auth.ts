@@ -27,6 +27,11 @@ const ResetPasswordSchema = z.object({
   password: z.string().min(8),
 });
 
+const VerifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
+
 /**
  * Auth routes delegate to Better Auth's API surface.
  * We thin-wrap them to maintain our standard response envelope
@@ -118,6 +123,54 @@ export function authRoutes(auth: AuthInstance, _db: Database) {
       return ok(c, session);
     } catch (e) {
       return err(c, "SESSION_ERROR", (e as Error).message, 401);
+    }
+  });
+
+  /* ── Email verification ──────────────────────────────────────── */
+
+  app.post("/verify-email", validateBody(VerifyEmailSchema), async (c) => {
+    try {
+      const { token } = c.req.valid("json");
+      const result = await auth.api.verifyEmail({
+        query: { token },
+      });
+      return ok(c, result);
+    } catch (e) {
+      return err(c, "VERIFICATION_FAILED", (e as Error).message, 400);
+    }
+  });
+
+  app.post("/send-verification-email", async (c) => {
+    try {
+      /**
+       * The frontend may call this with just a session cookie (no body),
+       * or optionally with an explicit email. When no email is provided
+       * we pull it from the active session so the verify page's
+       * "resend" button works without extra state.
+       */
+      const body = await c.req.json().catch(() => ({})) as {
+        email?: string;
+        callbackURL?: string;
+      };
+
+      let email = body.email;
+
+      if (!email) {
+        const session = await auth.api.getSession({
+          headers: c.req.raw.headers,
+        });
+        if (!session?.user?.email) {
+          return err(c, "UNAUTHORIZED", "No active session — please provide an email", 401);
+        }
+        email = session.user.email;
+      }
+
+      const result = await auth.api.sendVerificationEmail({
+        body: { email, callbackURL: body.callbackURL ?? "/verify" },
+      });
+      return ok(c, result);
+    } catch (e) {
+      return err(c, "SEND_VERIFICATION_FAILED", (e as Error).message, 400);
     }
   });
 

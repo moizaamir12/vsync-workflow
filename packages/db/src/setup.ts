@@ -1,33 +1,25 @@
-import { serve } from "@hono/node-server";
-import { WebSocketServer } from "ws";
-import type { WebSocket as WsWebSocket, RawData } from "ws";
-import { createPostgresClient, createPgliteClient, type Database } from "@vsync/db";
-import { createAuthServer } from "@vsync/auth";
-import { Interpreter } from "@vsync/engine";
-import { NodeAdapter } from "@vsync/engine-adapters";
-import { createApp } from "./index.js";
-import { handleMessage, handleDisconnect } from "./ws/handlers.js";
-import type { IncomingMessage } from "node:http";
-import type { WSLike } from "./ws/manager.js";
-import { sql } from "drizzle-orm";
-
-const PORT = parseInt(process.env["PORT"] ?? "3001", 10);
+import postgres from "postgres";
 
 /**
- * Bootstrap an in-memory PGlite database with all required tables.
- * Used for local development when DATABASE_URL is not provided.
+ * Creates all required tables in a PostgreSQL database.
+ * This mirrors the PGlite bootstrap in packages/api/src/server.ts
+ * so that a real Postgres instance has the same schema.
+ *
+ * Usage: DATABASE_URL=postgresql://... tsx src/setup.ts
  */
-async function createDevDatabase(): Promise<Database> {
-  const { PGlite } = await import("@electric-sql/pglite");
-  const pglite = new PGlite();
-  /* Cast through unknown — PGlite and postgres.js Drizzle types are
-     structurally compatible at runtime but differ at the type level. */
-  const db = createPgliteClient(pglite) as unknown as Database;
+async function main(): Promise<void> {
+  // TODO(schema): CRITICAL — Several tables in this DDL are out of sync with the Drizzle schema definitions in src/schema/. The following tables need reconciliation: accounts (column names differ), secrets (completely different schema), chats (missing workflow columns), cache (missing org scoping), devices (different columns and scoping). Reconcile one source of truth before production use.
+  const url = process.env["DATABASE_URL"];
 
-  console.log("[api] No DATABASE_URL found — using in-memory PGlite for local dev");
+  if (!url) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
 
-  /* Create tables matching the Drizzle schema */
-  await db.execute(sql`
+  const sql = postgres(url);
+
+  console.log("[db:setup] Creating tables...");
+
+  await sql`
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email TEXT UNIQUE NOT NULL,
@@ -37,8 +29,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS sessions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -49,8 +42,10 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  // TODO(schema): Column names here (account_id, provider_id) differ from Drizzle schema (provider_account_id, provider). Drizzle ORM queries will fail against this DDL.
+  await sql`
     CREATE TABLE IF NOT EXISTS accounts (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -66,8 +61,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS verifications (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       identifier TEXT NOT NULL,
@@ -76,8 +72,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS organizations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
@@ -87,8 +84,10 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  // TODO: Add ON DELETE CASCADE to org_id and user_id foreign keys to prevent orphaned records when orgs or users are deleted.
+  await sql`
     CREATE TABLE IF NOT EXISTS org_members (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       org_id UUID NOT NULL REFERENCES organizations(id),
@@ -97,8 +96,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       UNIQUE(org_id, user_id)
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS workflows (
       id TEXT PRIMARY KEY,
       org_id UUID NOT NULL REFERENCES organizations(id),
@@ -118,8 +118,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS workflow_versions (
       workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
       version INT NOT NULL,
@@ -132,8 +133,9 @@ async function createDevDatabase(): Promise<Database> {
       updated_at TIMESTAMP DEFAULT now(),
       PRIMARY KEY (workflow_id, version)
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS blocks (
       id TEXT PRIMARY KEY,
       workflow_id TEXT NOT NULL,
@@ -147,8 +149,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS runs (
       id TEXT PRIMARY KEY,
       workflow_id TEXT REFERENCES workflows(id),
@@ -165,8 +168,9 @@ async function createDevDatabase(): Promise<Database> {
       metadata JSONB,
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS artifacts (
       id TEXT PRIMARY KEY,
       run_id TEXT REFERENCES runs(id) ON DELETE CASCADE,
@@ -187,8 +191,9 @@ async function createDevDatabase(): Promise<Database> {
       thumbnail_url TEXT,
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS secrets (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       org_id UUID NOT NULL REFERENCES organizations(id),
@@ -199,16 +204,18 @@ async function createDevDatabase(): Promise<Database> {
       updated_at TIMESTAMP DEFAULT now(),
       UNIQUE(org_id, name)
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS cache (
       key TEXT PRIMARY KEY,
       value JSONB NOT NULL,
       expires_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS devices (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id),
@@ -218,8 +225,9 @@ async function createDevDatabase(): Promise<Database> {
       last_seen_at TIMESTAMP DEFAULT now(),
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS keys (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       org_id UUID NOT NULL REFERENCES organizations(id),
@@ -232,8 +240,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       rotated_at TIMESTAMP
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS key_audit_log (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       key_id UUID NOT NULL REFERENCES keys(id),
@@ -242,8 +251,9 @@ async function createDevDatabase(): Promise<Database> {
       metadata JSONB,
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS chats (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       org_id UUID NOT NULL REFERENCES organizations(id),
@@ -252,8 +262,9 @@ async function createDevDatabase(): Promise<Database> {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
-  `);
-  await db.execute(sql`
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS messages (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
@@ -262,9 +273,9 @@ async function createDevDatabase(): Promise<Database> {
       metadata JSONB,
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     CREATE TABLE IF NOT EXISTS public_runs (
       id TEXT PRIMARY KEY,
       workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
@@ -282,123 +293,15 @@ async function createDevDatabase(): Promise<Database> {
       metadata JSONB,
       created_at TIMESTAMP DEFAULT now()
     )
-  `);
+  `;
 
-  console.log("[api] PGlite schema created (19 tables)");
-  return db;
+  console.log("[db:setup] All 19 tables created successfully");
+
+  await sql.end();
+  process.exit(0);
 }
 
-/**
- * Standalone entry point for the V Sync API server.
- * Connects to Postgres (or falls back to in-memory PGlite),
- * initialises auth, and starts Hono on the configured port.
- * WebSocket upgrades on /api/v1/ws are handled by a co-located
- * WSS instance. Graceful shutdown tears down HTTP + WS connections.
- */
-async function main() {
-  const databaseUrl = process.env["DATABASE_URL"];
-
-  /* Initialise core dependencies */
-  const db: Database = databaseUrl
-    ? createPostgresClient(databaseUrl)
-    : await createDevDatabase();
-  const auth = createAuthServer(db);
-
-  /* Build the workflow engine with Node-native block adapters */
-  const interpreter = new Interpreter();
-  const nodeAdapter = new NodeAdapter();
-  nodeAdapter.registerBlocks(interpreter.blockExecutor);
-
-  const { app, wsManager } = createApp(auth, db, {
-    corsOrigins: (process.env["CORS_ORIGINS"] ?? "").split(",").filter(Boolean),
-    interpreter,
-  });
-
-  /* Start the HTTP server */
-  const server = serve({ fetch: app.fetch, port: PORT }, (info) => {
-    console.log(`[api] V Sync API running on http://localhost:${info.port}`);
-  });
-
-  /* Handle port-in-use gracefully instead of crashing with a raw stack trace */
-  server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      console.error(`[api] Port ${PORT} is already in use. Kill the existing process or change PORT in .env`);
-      console.error(`[api] Run: lsof -ti:${PORT} | xargs kill -9`);
-      process.exit(1);
-    }
-    throw err;
-  });
-
-  /**
-   * WebSocket upgrade handler.
-   *
-   * Uses the `ws` package in noServer mode so upgrades only happen
-   * on /api/v1/ws. Auth is done via a ?token= query param since
-   * browsers can't send custom headers during WebSocket handshake.
-   */
-  const wss = new WebSocketServer({ noServer: true });
-
-  server.on("upgrade", (request: IncomingMessage, socket, head) => {
-    const url = new URL(request.url ?? "/", `http://localhost:${PORT}`);
-
-    /* Only upgrade requests to /api/v1/ws */
-    if (url.pathname !== "/api/v1/ws") {
-      socket.destroy();
-      return;
-    }
-
-    // TODO(security): Move WebSocket auth token from query parameter to a secure handshake mechanism — tokens in URLs are logged in server access logs.
-    const token = url.searchParams.get("token");
-    const channels = (url.searchParams.get("channels") ?? "")
-      .split(",")
-      .filter(Boolean);
-
-    wss.handleUpgrade(request, socket, head, (ws: WsWebSocket) => {
-      const wsLike = ws as unknown as WSLike;
-
-      // TODO(auth): Implement proper WebSocket authentication — currently connections are accepted without verifying the token.
-      wsManager.register(wsLike, {
-        userId: token ? "pending-auth" : null,
-        orgId: null,
-        channels: new Set(channels),
-      });
-
-      ws.on("message", (data: RawData) => {
-        handleMessage(wsManager, wsLike, data.toString());
-      });
-
-      ws.on("close", () => {
-        handleDisconnect(wsManager, wsLike);
-      });
-
-      ws.on("error", () => {
-        handleDisconnect(wsManager, wsLike);
-      });
-
-      /* Send a welcome message so clients know the connection is live */
-      ws.send(JSON.stringify({
-        type: "connected",
-        timestamp: new Date().toISOString(),
-        channels,
-      }));
-    });
-  });
-
-  /* Graceful shutdown */
-  const shutdown = () => {
-    console.log("[api] Shutting down...");
-    wss.close();
-    server.close(() => {
-      console.log("[api] Server closed");
-      process.exit(0);
-    });
-  };
-
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
-}
-
-main().catch((err) => {
-  console.error("[api] Fatal error:", err);
+main().catch((err: unknown) => {
+  console.error("[db:setup] Failed:", err);
   process.exit(1);
 });

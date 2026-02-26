@@ -126,6 +126,7 @@ export function useAIDesigner(options: UseAIDesignerOptions): UseAIDesignerRetur
 
   /* ── Local state ──────────────────────────────── */
 
+  // TODO(perf): Memoize messages loaded from localStorage to prevent unnecessary re-renders.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -150,6 +151,7 @@ export function useAIDesigner(options: UseAIDesignerOptions): UseAIDesignerRetur
 
   /* ── Designer instance (memoized) ─────────────── */
 
+  // TODO: Show a user-visible warning when NEXT_PUBLIC_AI_API_KEY is missing instead of silently creating a non-functional designer instance.
   const designer = useMemo(() => {
     if (!apiKey) return null;
     return new WorkflowDesigner({ apiKey, model });

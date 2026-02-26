@@ -16,6 +16,7 @@ export const MAX_SLEEP_DURATION_MS = 300_000;
 export const MAX_FETCH_TIMEOUT_MS = 60_000;
 
 /** Maximum parallel deferred iterations to prevent resource exhaustion. */
+// TODO: This value (10) is never enforced by the Interpreter — deferConcurrency defaults to 3 in Interpreter.ts. Reconcile.
 export const MAX_CONCURRENT_DEFERRED = 10;
 
 /** Maximum goto-chain depth before the engine aborts to prevent infinite loops. */
@@ -59,6 +60,7 @@ export const PRO_TIER_LIMITS: TierLimits = {
  * Enterprise tier — effectively unlimited across all dimensions.
  * Uses `Infinity` so comparisons like `usage < limit` always pass.
  */
+// TODO: Replace Infinity with a large finite number — Infinity can cause issues with JSON serialization and numeric comparisons.
 export const ENTERPRISE_TIER_LIMITS: TierLimits = {
   workflows: Infinity,
   runsPerMonth: Infinity,

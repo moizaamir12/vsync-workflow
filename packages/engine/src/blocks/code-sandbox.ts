@@ -68,6 +68,7 @@ function safeSerialize(value: unknown): unknown {
   try {
     /* Round-trip through JSON to strip non-serializable values */
     const json = JSON.stringify(value);
+    // TODO: Warn consumers when sandbox output is truncated at 1024 chars — silent truncation can cause data loss.
     if (json.length > 1024) {
       return JSON.parse(json.slice(0, 1024) + "...(truncated)");
     }

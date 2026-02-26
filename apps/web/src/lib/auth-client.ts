@@ -2,6 +2,7 @@ import { createAuthClient, type VsyncAuthClient, type AuthSession } from "@vsync
 
 /* ── Environment ─────────────────────────────────────────────── */
 
+// TODO: Import API_URL from a shared constant instead of duplicating it here.
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 /* ── Singleton auth client ───────────────────────────────────── */

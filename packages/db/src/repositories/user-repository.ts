@@ -30,6 +30,7 @@ export class UserRepository {
 
   /** Partial update of a user's mutable fields. */
   async update(id: string, data: Partial<typeof users.$inferInsert>) {
+    // TODO: Handle case where update returns empty array (no matching row) — currently returns undefined silently.
     const [row] = await this.db
       .update(users)
       .set({ ...data, updatedAt: new Date() })

@@ -277,6 +277,7 @@ function formatCustom(date: Date, pattern: string): string {
     .replace("ss", pad2(date.getUTCSeconds()));
 }
 
+// TODO: Fix UTC consistency — this function mixes getFullYear() (local) with UTC date operations.
 function getWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));

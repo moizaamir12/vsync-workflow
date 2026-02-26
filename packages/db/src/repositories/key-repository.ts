@@ -65,6 +65,7 @@ export class KeyRepository {
     });
   }
 
+  // TODO: Handle case where update returns empty array (no matching row) — currently returns undefined silently.
   /** Partial update of key metadata. */
   async update(id: string, data: Partial<typeof keys.$inferInsert>) {
     const [row] = await this.db
@@ -123,4 +124,8 @@ export class KeyRepository {
       orderBy: desc(keyAuditLog.createdAt),
     });
   }
+
+  // TODO: Add findByOrgAndName() for name-based lookups
+  // TODO: Add findActiveKeys() to filter out revoked keys
+  // TODO: Add findExpiredKeys() for rotation management
 }

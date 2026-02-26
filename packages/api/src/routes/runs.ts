@@ -134,6 +134,7 @@ export function runRoutes(
 
   /* ── Get run with steps ────────────────────────────────────── */
 
+  // TODO(auth): Verify the authenticated user's org owns this run before returning data.
   app.get("/runs/:id", requireAuth(auth), validateParams(IdParam), async (c) => {
     const { id } = c.req.valid("param");
     const run = await runRepo.findById(id);
@@ -143,6 +144,7 @@ export function runRoutes(
 
   /* ── Delete run ────────────────────────────────────────────── */
 
+  // TODO(auth): Verify org ownership before allowing deletion — currently any authenticated user can delete any run.
   app.delete("/runs/:id", requireAuth(auth), orgContext(), validateParams(IdParam), async (c) => {
     const { id } = c.req.valid("param");
     const { eq } = await import("drizzle-orm");
@@ -209,6 +211,7 @@ export function runRoutes(
 
   /* ── SSE live status ───────────────────────────────────────── */
 
+  // TODO(perf): Replace polling-based SSE with push-based event delivery (e.g. Postgres LISTEN/NOTIFY or in-memory pub/sub).
   app.get("/runs/:id/live", requireAuth(auth), validateParams(IdParam), async (c) => {
     const { id } = c.req.valid("param");
 

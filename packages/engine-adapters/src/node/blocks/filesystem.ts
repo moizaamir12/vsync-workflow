@@ -209,6 +209,7 @@ async function executeAppend(
 export function validatePath(inputPath: string): string {
   const normalized = path.normalize(inputPath);
 
+  // TODO(security): Path validation only checks for ".." but allows absolute paths — could escape intended directory scope.
   /* Block directory traversal */
   if (normalized.includes("..")) {
     throw new Error(

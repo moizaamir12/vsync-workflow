@@ -388,6 +388,7 @@ function fuzzyScore(text: string, query: string): number {
     }
   }
 
+  // TODO: Fix fuzzy score returning 0 incorrectly when query partially matches.
   if (queryIdx < query.length) return 0;
   return matched / Math.max(text.length, query.length);
 }
@@ -399,6 +400,7 @@ function escapeCsvField(field: string, delimiter: string): string {
   return field;
 }
 
+// TODO: Fix multi-character delimiter handling — current implementation only checks delimiter[0].
 function parseCsvLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let current = "";
